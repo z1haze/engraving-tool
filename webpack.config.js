@@ -20,6 +20,10 @@ function getPlugins (mode) {
                     from: __dirname + '/client/src/img',
                     to  : __dirname + '/client/dist/img'
                 },
+                {
+                    from: __dirname + '/client/src/svg',
+                    to  : __dirname + '/client/dist/svg'
+                }
             ]
         }),
         new MiniCssExtractPlugin({

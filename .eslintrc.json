@@ -6,7 +6,8 @@
   "parserOptions": {
     "parser": "babel-eslint",
     "ecmaVersion": 2017,
-    "allowImportExportEverywhere": true
+    "allowImportExportEverywhere": true,
+    "sourceType": "module"
   },
   "env": {
     "es6": true,

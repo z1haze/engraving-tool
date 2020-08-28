@@ -1,3 +1,59 @@
-<div class="container vh-100 position-relative">
-    <img src="/img/ohyea.png" alt="ohyea" data-container="body" data-toggle="popover" data-placement="top" data-content="Vivamus sagittis lacus vel augue laoreet rutrum faucibus.">
+<div class="vh-100 position-relative">
+    <header class="bg-white mb-5">
+        <div class="container-fluid h-100">
+            <div class="row justify-content-between align-items-end">
+                <h1 class="col">Crown Engraving Tool</h1>
+
+                <div class="col-2 text-center">
+                    <div class="row justify-content-center">
+                        <label for="" class="col-form-label">Select Environment</label>
+                        <div class="col-6 pr-0">
+                            <select class="custom-select mb-2 mr-sm-2" id="environment">
+                                <option value="development" selected>Development</option>
+                                <option value="staging">Staging</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col text-right pb-2">
+                    <div>Logged in as <span class="font-weight-bold text-uppercase">shendricks</span> | <a href="#">Logout</a></div>
+                    <div><a href="#" id="test">test draw</a></div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div id="main" class="container">
+        <div class="row no-gutters justify-content-center mb-5">
+            <div class="col-12 bg-white rounded p-3">
+                <form class="form-inline justify-content-between">
+                    <label for="itemNumber" class="sr-only">Item Number:</label>
+                    <input type="text" class="form-control mr-sm-2 col-7" id="itemNumber" placeholder="Item Number">
+
+                    <select class="custom-select col" id="template">
+                        <option selected></option>
+                    </select>
+                </form>
+            </div>
+        </div>
+
+        <div class="row no-gutters justify-content-center mb-3">
+            <div class="col-12 col-md-auto bg-white rounded p-3">
+                <div id="result">
+                    <div class="inner d-flex justify-content-center align-items-center position-relative">
+                        <h4>No Template Loaded</h4>
+                        <canvas class="d-none" id="canvas" width="320" height="432"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="output" class="row no-gutters justify-content-center d-none">
+            <div class="col-12 col-md-auto w-100 d-flex justify-content-between align-items-center p-3 bg-white rounded">
+                <span class="coords"></span>
+                <button type="button" class="btn btn-sm btn-primary ml-3 d-none">Save</button>
+            </div>
+        </div>
+    </div>
 </div>
