@@ -8,9 +8,12 @@
                     <div class="row justify-content-center">
                         <label for="" class="col-form-label">Select Environment</label>
                         <div class="col-6 pr-0">
-                            <select class="custom-select mb-2 mr-sm-2" id="environment">
+                            <select class="custom-select mb-2 mr-sm-2" id="env">
                                 <option value="development" selected>Development</option>
                                 <option value="staging">Staging</option>
+                                <option value="dev01">dev01</option>
+                                <option value="dev02">dev02</option>
+                                <option value="dev05">dev05</option>
                             </select>
                         </div>
                     </div>
@@ -18,7 +21,6 @@
 
                 <div class="col text-right pb-2">
                     <div>Logged in as <span class="font-weight-bold text-uppercase">shendricks</span> | <a href="#">Logout</a></div>
-                    <div><a href="#" id="test">test draw</a></div>
                 </div>
             </div>
         </div>
@@ -29,7 +31,7 @@
             <div class="col-12 bg-white rounded p-3">
                 <form class="form-inline justify-content-between">
                     <label for="itemNumber" class="sr-only">Item Number:</label>
-                    <input type="text" class="form-control mr-sm-2 col-7" id="itemNumber" placeholder="Item Number">
+                    <input type="text" class="form-control mr-sm-2 col-7 text-uppercase" id="itemNumber" placeholder="Item Number">
 
                     <select class="custom-select col" id="template">
                         <option selected></option>
@@ -52,7 +54,7 @@
         <div id="output" class="row no-gutters justify-content-center d-none">
             <div class="col-12 col-md-auto w-100 d-flex justify-content-between align-items-center p-3 bg-white rounded">
                 <span class="coords"></span>
-                <button type="button" class="btn btn-sm btn-primary ml-3 d-none">Save</button>
+                <button type="button" id="save" class="btn btn-sm btn-primary ml-3">Save</button>
             </div>
         </div>
     </div>

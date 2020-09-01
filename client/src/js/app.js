@@ -1,65 +1,282 @@
-console.log('Loaded! 😀'); // eslint-disable-line no-console
+import 'regenerator-runtime';
+import Swal from 'sweetalert2';
 
-import initCanvas from './init_canvas';
-import {drawRectangle} from './init_canvas';
+import store from './store';
+import CanvasManager from './canvas';
 
-const canvas = document.getElementById('canvas');
+const state = store.getState();
+
+// dom elements
+const $env = $('#env');
+const $itemNumber = $('#itemNumber');
+const $template = $('#template');
+const $output = $('#output');
+const $coords = $output.find('.coords');
 const $inner = $('#result .inner');
+const $save = $('#save');
 
-// tells us if the canvas is initialized
-let canvasInitialized = initCanvas(canvas);
+// instance vars
+const canvas = document.getElementById('canvas');
+const canvasManager = new CanvasManager({canvas});
+const previouslySavedEnv = localStorage.getItem('env');
+
+if (previouslySavedEnv) {
+    $env.val(previouslySavedEnv);
+}
+
+store.dispatch({
+    type: 'SET',
+    key : 'env',
+    val : $env.val()
+});
+
+store.subscribe(() => {
+    if (state.textArea) {
+        $output.removeClass('d-none');
+        $coords.html(`Text Area: ${JSON.stringify(state.textArea)}`);
+    } else {
+        $output.addClass('d-none');
+    }
+});
 
 /**
- * Load the default engraving area for a product if it exists
- *
- * @param data
- * @returns {boolean}
+ * handle search form submission
  */
-const loadDefault = (points, image) => {
-    $inner.css('background-image', `url(${image})`);
+$('form').submit(async function (e) {
+    e.preventDefault();
 
-    if (!points || !(points instanceof Array) || points.length !== 4) {
+    // convert to uppercase
+    const itemNumber = $itemNumber.val().toUpperCase();
+    $itemNumber.val(itemNumber);
+
+    if (!itemNumber || itemNumber === state.itemNumber) {
         return false;
     }
 
-    if (!canvasInitialized) {
-        canvas.classList.remove('d-none');
+    store.dispatch({
+        type: 'SET',
+        key : 'itemNumber',
+        val : itemNumber
+    });
+
+    const hits = await search(itemNumber);
+
+    store.dispatch({
+        type: 'SET',
+        key : 'hits',
+        val : hits
+    });
+
+    store.dispatch({
+        type: 'SET',
+        key : 'template',
+        val : hits.length ? hits[0].c_templatePortion : null
+    });
+
+    populateTemplates(hits);
+
+    if (hits.length) {
+        $inner.css('background-image', `url(https://devbuilder.crownawards.com/StoreFront/ImageCompositionServlet?files=jsp/builderimages/plaques/${hits[0].c_templateImage})`);
         $inner.find('h4').addClass('d-none');
-        canvasInitialized = initCanvas(canvas);
+        canvas.classList.remove('d-none');
 
-        if (!canvasInitialized) {
-            return false;
-        }
+        store.dispatch({
+            type: 'SET',
+            key : 'textArea',
+            val : drawFromHit(hits[0])
+        });
+    } else {
+        canvasManager.clear();
+        $inner.css('background-image', '');
+        $inner.find('h4').removeClass('d-none');
+        canvas.classList.add('d-none');
+
+        Swal.fire({
+            icon  : 'error',
+            title : 'Oops...',
+            text  : 'No Results Found!',
+            footer: '<span class="text-primary font-weight-bold">Check your spelling and try again</span>'
+        });
     }
+});
 
-    drawRectangle(...points);
+/**
+ * When the template dropdown is changed, we need to update the render
+ */
+$template.change(function () {
+    const hit = state.hits.find((hit) => hit.c_templatePortion === $(this).val());
 
-    const $output = $('#output');
-    const $coords = $output.find('.coords');
+    if (hit) {
+        store.dispatch({
+            type: 'SET',
+            key : 'template',
+            val : $(this).val()
+        });
+        
+        store.dispatch({
+            type: 'SET',
+            key : 'textArea',
+            val : drawFromHit(hit)
+        });
+    }
+});
 
-    $coords.html(`Coordinates: ${JSON.stringify(points)}`);
-    $output.removeClass('d-none');
-};
+/**
+ * Update the environment we point to when the value changes and save in local storage for persistent reloads
+ */
+$env.change(function () {
+    localStorage.setItem('env', $(this).val());
 
-$('form').submit(function (e) {
-    e.preventDefault();
+    store.dispatch({
+        type: 'SET',
+        key : 'env',
+        val : $(this).val()
+    });
+});
 
-    const itemNumber = $(this).find('#itemNumber').val().toUpperCase();
+/**
+ * Save the engraving area
+ */
+$save.click(() => {
+    const itemIndex = state.hits.findIndex((hit) => hit.c_templatePortion === state.template);
 
-    if (!itemNumber) {
+    if (itemIndex === -1) {
         return false;
     }
 
-    // fetch all 8511s for this item and store all data in a state
-    // load 8511 values into dropdown
-    // load first background
-    // initialize canvas if not already
-    // draw existing rectangle if coordinates exist
+    const item = state.hits[itemIndex];
+
+    return $.ajax({
+        method : 'patch',
+        url    : `https://${state.env}-webstore-crownawards.demandware.net/s/-/dw/data/v20_8/custom_objects/EngravingTemplateDetail/${item.c_itemPortion}-${item.c_templatePortion}`,
+        headers: {
+            'Authorization': `Bearer ${state.accessToken}`,
+            'Content-Type' : 'application/json'
+        },
+        data: JSON.stringify({
+            'c_textArea': JSON.stringify(state.textArea)
+        })
+    })
+        .then(() => {
+            // alert showing unable to parse text area
+            Swal.fire({
+                icon : 'success',
+                title: 'Saved!',
+                text : `${item.c_itemPortion}-${item.c_templatePortion} has been saved to ${state.env}`
+            })
+                .then(() => {
+                    // update item in state with saved coords
+                    store.dispatch({
+                        type    : 'SET_TEXT_AREA',
+                        index   : itemIndex,
+                        textArea: state.textArea
+                    });
+                });
+        });
 });
 
-// test code
-$('#test').click((e) => {
-    e.preventDefault();
+/**
+ * Helper method to draw rectangle from hit result
+ *
+ * @param hit
+ * @returns {*}
+ */
+function drawFromHit (hit) {
+    try {
+        const textArea = JSON.parse(hit.c_textArea);
 
-    loadDefault([50, 54, 227, 304], 'https://devbuilder.crownawards.com/StoreFront/ImageCompositionServlet?files=jsp/builderimages/plaques/LUCBB4_eng.png');
-});
+        return canvasManager.drawRect(...textArea);
+    } catch (e) {
+        canvasManager.clear();
+
+        Swal.fire({
+            icon : 'error',
+            title: 'Oops...',
+            text : 'The textarea for this template was either missing or contains invalid data and has been reset'
+        });
+    }
+}
+
+/**
+ * Populate the 8511 dropdown after search
+ *
+ * @param hits
+ */
+function populateTemplates (hits) {
+    // clear dropdown of previous results
+    $template.empty();
+
+    // populate the dropdown with new 8511 results
+    hits.forEach((hit) => {
+        $template.append(`<option id="${hit.c_templatePortion}">${hit.c_templatePortion}</option>`);
+    });
+}
+
+/**
+ * Fetch oauth access token
+ *
+ * @returns {*}
+ */
+function getAccessToken () {
+    return $.ajax({
+        method : 'post',
+        url    : 'https://account.demandware.com/dw/oauth2/access_token',
+        headers: {
+            'Authorization': `Basic ${btoa('')}`,
+            'Content-Type' : 'application/x-www-form-urlencoded'
+        },
+        data: {
+            'grant_type': 'client_credentials'
+        }
+    }).then((res) => res.access_token);
+}
+
+/**
+ * Search for templates for a particular item
+ *
+ * @param itemNumber
+ * @returns {Promise<*>}
+ */
+async function search (itemNumber) {
+    if (!state.accessToken) {
+        store.dispatch({
+            type: 'SET',
+            key : 'accessToken',
+            val : await getAccessToken()
+        });
+    }
+
+    return $.ajax({
+        method : 'post',
+        url    : `https://${state.env}-webstore-crownawards.demandware.net/s/-/dw/data/v20_8/custom_objects_search/EngravingTemplateDetail`,
+        headers: {
+            'Authorization': `Bearer ${state.accessToken}`,
+            'Content-Type' : 'application/json'
+        },
+        data: JSON.stringify({
+            query: {
+                'term_query': {
+                    'fields'  : ['c_itemPortion'],
+                    'operator': 'is',
+                    'values'  : [itemNumber]
+                }
+            },
+            'select': '(**)'
+        })
+    })
+        .then((res) => {
+            if (res.total === 0) {
+                return [];
+            }
+
+            return res.hits.map((hit) => {
+                return {
+                    'id'               : hit.key_value_string,
+                    'c_itemPortion'    : hit.c_itemPortion,
+                    'c_templatePortion': hit.c_templatePortion,
+                    'c_textArea'       : hit.c_textArea,
+                    'c_templateImage'  : hit.c_templateImage,
+                };
+            });
+        });
+}
