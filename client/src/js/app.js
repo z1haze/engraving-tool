@@ -76,7 +76,7 @@ $('form').submit(async function (e) {
     populateTemplates(hits);
 
     if (hits.length) {
-        $inner.css('background-image', `url(https://devbuilder.crownawards.com/StoreFront/ImageCompositionServlet?files=jsp/builderimages/plaques/${hits[0].c_templateImage})`);
+        $inner.css('background-image', `url(${getImagePath(hits[0].c_templateImage)})`);
         $inner.find('h4').addClass('d-none');
         canvas.classList.remove('d-none');
 
@@ -105,6 +105,8 @@ $('form').submit(async function (e) {
  */
 $template.change(function () {
     const hit = state.hits.find((hit) => hit.c_templatePortion === $(this).val());
+
+    $inner.css('background-image', `url(${getImagePath(hit.c_templateImage)})`);
 
     if (hit) {
         store.dispatch({
@@ -279,4 +281,10 @@ async function search (itemNumber) {
                 };
             });
         });
+}
+
+function getImagePath (imageName) {
+    const builderPlaquesURL = (imageName.indexOf('.gif') > -1 || imageName.indexOf('BN') === 0) ? 'jsp/images/plaques' : 'jsp/builderimages/plaques';
+
+    return `https://devbuilder.crownawards.com/StoreFront/ImageCompositionServlet?files=${builderPlaquesURL}/${imageName}`;
 }
